@@ -1,9 +1,9 @@
 
 use rand::Rng;
 
-const M_PI:f32 = 3.14159265358979323846;
+pub const M_PI:f32 = 3.14159265358979323846;
 
-fn solve_quadratic(a:f32, b:f32, c:f32, x0:&mut f32, x1:&mut f32) -> bool{
+pub fn solve_quadratic(a:f32, b:f32, c:f32, x0:&mut f32, x1:&mut f32) -> bool{
     let discr = b*b-4.0*a*c; // 判别式
     if discr < 0.0 {
         return false;
@@ -29,18 +29,18 @@ fn solve_quadratic(a:f32, b:f32, c:f32, x0:&mut f32, x1:&mut f32) -> bool{
     return true;
 }
 
-enum MaterialType{
+pub enum MaterialType{
     DIFFUSE_AND_GLOSSY,
     REFLECTION_AND_REFRACTION,
     REFLECTION
 }
 
-fn get_random_f32() -> f32 {
+pub fn get_random_f32() -> f32 {
     let mut rng = rand::thread_rng();
     return rng.gen_range(0.0..1.0f32);
 }
 
-fn update_progress(progress: f32){
+pub fn update_progress(progress: f32){
     const bar_width :usize = 70;
     let pos = (bar_width as f32 * progress) as usize;
     print!("[");
@@ -55,8 +55,7 @@ fn update_progress(progress: f32){
             print!(" ");
         }
     }
-    print!("]");
-    println!(" {}%", (progress * 100.0) as i32)
+    println!("] {}%", (progress * 100.0) as i32);
 }
 
 #[cfg(test)]

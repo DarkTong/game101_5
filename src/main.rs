@@ -1,4 +1,6 @@
 mod global;
+mod Object;
+mod Sphere;
 
 extern crate nalgebra_glm as glm;
 
