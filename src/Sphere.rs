@@ -43,7 +43,7 @@ impl ObjectTrait for Sphere {
     }
 
     fn get_surface_properties(&self, p: &glm::Vec3, _: &glm::Vec3, _: &u32,
-                              _: &glm::Vec2, n: &mut glm::Vec3, _: &glm::Vec2) {
+                              _: &glm::Vec2, n: &mut glm::Vec3, _: &mut glm::Vec2) {
         *n = (p - self.center).normalize();
     }
 

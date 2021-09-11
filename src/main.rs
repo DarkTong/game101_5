@@ -1,6 +1,10 @@
 mod global;
 mod Object;
 mod Sphere;
+mod Triangle;
+mod Scene;
+mod Light;
+mod Render;
 
 extern crate nalgebra_glm as glm;
 
