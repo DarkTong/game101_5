@@ -56,7 +56,7 @@ impl ObjectTrait for Sphere {
     }
 
     fn eval_diffuse_color(&self, _: &glm::Vec2) -> glm::Vec3 {
-        return glm::zero();
+        return self.object.diffuse_color;
     }
 }
 

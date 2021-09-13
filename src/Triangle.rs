@@ -56,10 +56,10 @@ impl ObjectTrait for MeshTriangle {
         return &self.object;
     }
     fn get_material_type(&self) -> MaterialType {
-        return self.object.material_type.clone();
+        return self.object.material_type;
     }
     fn intersect(&self, orig: &glm::Vec3, dir: &glm::Vec3,
-                 tnear: &mut f32, _: &mut u32, uv: &mut glm::Vec2) -> bool {
+                 tnear: &mut f32, index: &mut u32, uv: &mut glm::Vec2) -> bool {
         let mut intersect = false;
 
         for k in 0..self.num_triangles as usize {
@@ -74,6 +74,7 @@ impl ObjectTrait for MeshTriangle {
                 *tnear = t;
                 uv.x = u;
                 uv.y = v;
+                *index = k as u32;
                 intersect = true
             }
         }

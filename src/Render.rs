@@ -42,7 +42,7 @@ fn reflect(I: &glm::Vec3, N: &glm::Vec3) -> glm::Vec3{
 // [/comment]
 
 fn refract(I: &glm::Vec3, N: &glm::Vec3, ior: f32) -> glm::Vec3 {
-    let mut cosi = f32::clamp(-1.0, 1.0, glm::dot(I, N));
+    let mut cosi = glm::dot(I, N).clamp(-1.0, 1.0);
     let mut etai = 1.0f32;
     let mut etat = ior;
     let mut n = N.clone();
@@ -74,7 +74,7 @@ fn refract(I: &glm::Vec3, N: &glm::Vec3, ior: f32) -> glm::Vec3 {
 // \param ior is the material refractive index
 // [/comment]
 fn fresnel(I: &glm::Vec3, N: &glm::Vec3, ior: f32) -> f32{
-    let cosi = f32::clamp(-1.0, 1.0, glm::dot(I, N));
+    let cosi = glm::dot(I, N).clamp(-1.0, 1.0);
     let mut etai = 1.0f32;
     let mut etat = ior;
     if cosi > 0. {
@@ -179,9 +179,9 @@ fn cast_ray(orig: &glm::Vec3, dir: &glm::Vec3, scene: &Scene, depth: i32) -> glm
                 let kr = fresnel(&dir, &n, payload.hit_obj.get_base().ior);
                 let reflection_direction = glm::normalize(&reflect(&dir, &n));
                 let reflection_ray_orig = if glm::dot(&reflection_direction, &n) < 0. {
-                    hit_point - n * scene.epsilon
-                } else {
                     hit_point + n * scene.epsilon
+                } else {
+                    hit_point - n * scene.epsilon
                 };
                 let reflection_color = cast_ray(&reflection_ray_orig, &reflection_direction, &scene, depth + 1);
                 hit_color = reflection_color;
@@ -265,8 +265,8 @@ impl RenderTrait for Renderer {
     // saved to a file.
     // [/comment]
     fn render(&self, scene: &Scene) {
-        let mut frame_buffer =
-            Vec::<glm::Vec3>::with_capacity((scene.width * scene.height) as usize);
+        let mut frame_buffer = Vec::<glm::Vec3>::new();
+        frame_buffer.resize((scene.width * scene.height) as usize, glm::zero());
 
         let scale = deg_2_rad(scene.fov * 0.5).tan();
         let image_aspect_radio = scene.width as f32 / scene.height as f32;
@@ -283,9 +283,12 @@ impl RenderTrait for Renderer {
                 // Also, don't forget to multiply both of them with the variable *scale*, and
                 // x (horizontal) variable with the *imageAspectRatio*
 
+                let x = (2.0 / scene.width  as f32 * (i as f32 + 0.5)- 1.0f32) * scale * image_aspect_radio;
+                let y = (2.0 / scene.height as f32 * (j as f32 + 0.5)- 1.0f32) * scale * -1.0f32;
+
                 let dir = glm::vec3(x, y, -1.0);
-                m = m + 1;
                 frame_buffer[m] = cast_ray(&eye_pos, &dir, &scene, 0);
+                m = m + 1;
             }
         }
 
