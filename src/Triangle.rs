@@ -1,6 +1,7 @@
 
 use crate::Object::*;
 use std::panic::panic_any;
+use crate::global::MaterialType;
 
 fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3, v2: &glm::Vec3,
                         orig: &glm::Vec3, dir: &glm::Vec3, tnear: &mut f32, u: &mut f32, v: &mut f32) -> bool {
@@ -51,6 +52,12 @@ impl MeshTriangle {
 }
 
 impl ObjectTrait for MeshTriangle {
+    fn get_base(&self) -> &Object {
+        return &self.object;
+    }
+    fn get_material_type(&self) -> MaterialType {
+        return self.object.material_type.clone();
+    }
     fn intersect(&self, orig: &glm::Vec3, dir: &glm::Vec3,
                  tnear: &mut f32, _: &mut u32, uv: &mut glm::Vec2) -> bool {
         let mut intersect = false;

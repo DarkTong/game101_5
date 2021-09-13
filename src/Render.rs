@@ -1,6 +1,9 @@
 use crate::Object::ObjectTrait;
 use crate::Scene::Scene;
-use crate::global::M_PI;
+use crate::global::{M_PI, MaterialType};
+use std::fs::File;
+use std::io::Write;
+use std::mem::transmute;
 
 pub struct hit_payload<'a> {
     pub hit_obj: &'a Box<dyn ObjectTrait>,
@@ -10,7 +13,7 @@ pub struct hit_payload<'a> {
 }
 
 pub trait RenderTrait {
-    fn render(scene: &Scene);
+    fn render(&self, scene: &Scene);
 }
 
 pub struct Renderer;
@@ -47,15 +50,15 @@ fn refract(I: &glm::Vec3, N: &glm::Vec3, ior: f32) -> glm::Vec3 {
         cosi = -cosi;
     }
     else {
-        (etai, etat) = (etat, etai);
+        std::mem::swap(&mut etai, &mut etat);
         n = -n;
     }
 
     let eta = etai / etat;
-    let k = 1.0 - eta * eta * (1 - cosi * cosi);
+    let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
 
     return if k < 0. {
-        glm::Vec3(0., 0., 0.)
+        glm::vec3(0., 0., 0.)
     } else {
         eta * I + (eta * cosi - k.sqrt()) * n
     }
@@ -72,10 +75,10 @@ fn refract(I: &glm::Vec3, N: &glm::Vec3, ior: f32) -> glm::Vec3 {
 // [/comment]
 fn fresnel(I: &glm::Vec3, N: &glm::Vec3, ior: f32) -> f32{
     let cosi = f32::clamp(-1.0, 1.0, glm::dot(I, N));
-    let etai = 1.0f32;
-    let etat = ior;
+    let mut etai = 1.0f32;
+    let mut etat = ior;
     if cosi > 0. {
-        (etai, etat) = (etat, etai);
+        std::mem::swap(&mut etai, &mut etat);
     }
     let sint = etai / etat * (1.0-cosi*cosi).max(0.0).sqrt();
     if sint >= 1. {
@@ -102,7 +105,7 @@ fn fresnel(I: &glm::Vec3, N: &glm::Vec3, ior: f32) -> f32{
 // \param[out] *hitObject stores the pointer to the intersected object (used to retrieve material information, etc.)
 // \param isShadowRay is it a shadow ray. We can return from the function sooner as soon as we have found a hit.
 // [/comment]
-fn trace(orig: &glm::Vec3, dir: &glm::Vec3, objects: &Vec<Box<ObjectTrait>>) -> Option<hit_payload> {
+fn trace<'a>(orig: &glm::Vec3, dir: &glm::Vec3, objects: &'a Vec<Box<dyn ObjectTrait>>) -> Option<hit_payload<'a>> {
     let mut t_near = f32::INFINITY;
 
     let mut payload = None;
@@ -141,9 +144,118 @@ fn trace(orig: &glm::Vec3, dir: &glm::Vec3, objects: &Vec<Box<ObjectTrait>>) -> 
 // If the surface is diffuse/glossy we use the Phong illumation model to compute the color
 // at the intersection point.
 // [/comment]
-fn cast_ray(orig: &Vec3, dir: &Vec3, scene: &Scene, depth: i32) -> glm::Vec3 {
+fn cast_ray(orig: &glm::Vec3, dir: &glm::Vec3, scene: &Scene, depth: i32) -> glm::Vec3 {
 
-    return glm::vec3(0., 0., 0.);
+    if depth > scene.max_depth {
+        return glm::vec3(0., 0., 0.);
+    }
+
+    let mut hit_color = scene.background_color.clone();
+    if let Some(payload) = trace(orig, dir, scene.get_objects()) {
+        let hit_point = orig + dir * payload.t_near;
+        let mut n = glm::vec3(0., 0., 0.);
+        let mut st = glm::vec2(0., 0.);
+        payload.hit_obj.get_surface_properties(&hit_point, &dir, &payload.index, &payload.uv, &mut n, &mut st);
+        match payload.hit_obj.get_material_type() {
+            MaterialType::REFLECTION_AND_REFRACTION => {
+                let reflection_direction = glm::normalize(&reflect(&dir, &n));
+                let refraction_direction = glm::normalize(&refract(&dir, &n, payload.hit_obj.get_base().ior));
+                let reflection_ray_orig = if glm::dot(&reflection_direction, &n) < 0. {
+                    hit_point - n * scene.epsilon
+                } else {
+                    hit_point + n * scene.epsilon
+                };
+                let refraction_ray_orig = if glm::dot(&refraction_direction, &n) < 0. {
+                    hit_point - n * scene.epsilon
+                } else {
+                    hit_point + n * scene.epsilon
+                };
+                let reflection_color = cast_ray(&reflection_ray_orig, &reflection_direction, &scene, depth + 1);
+                let refraction_color = cast_ray(&refraction_ray_orig, &refraction_direction, &scene, depth + 1);
+                let kr = fresnel(&dir, &n, payload.hit_obj.get_base().ior);
+                hit_color = reflection_color * kr + refraction_color * (1.0 - kr);
+            }
+            MaterialType::REFLECTION => {
+                let kr = fresnel(&dir, &n, payload.hit_obj.get_base().ior);
+                let reflection_direction = glm::normalize(&reflect(&dir, &n));
+                let reflection_ray_orig = if glm::dot(&reflection_direction, &n) < 0. {
+                    hit_point - n * scene.epsilon
+                } else {
+                    hit_point + n * scene.epsilon
+                };
+                let reflection_color = cast_ray(&reflection_ray_orig, &reflection_direction, &scene, depth + 1);
+                hit_color = reflection_color;
+            }
+            MaterialType::DIFFUSE_AND_GLOSSY => {
+                // [comment]
+                // We use the Phong illumation model int the default case. The phong model
+                // is composed of a diffuse and a specular reflection component.
+                // [/comment]
+                let mut light_amt = glm::vec3(0., 0., 0.);
+                let mut specular_color = glm::vec3(0., 0., 0.);
+                let shadow_point_orig = if glm::dot(&dir, &n) < 0. {
+                    hit_point + n * scene.epsilon
+                } else {
+                    hit_point - n * scene.epsilon
+                };
+
+                // [comment]
+                // Loop over all lights in the scene and sum their contribution up
+                // We also apply the lambert cosine law
+                // [/comment]
+                for light in scene.get_lights() {
+                    let light_dir = light.position - hit_point;
+                    let light_distance2 = glm::dot(&light_dir, &light_dir);
+                    let light_dir = light_dir.normalize();
+                    let LdotN = glm::dot(&light_dir, &n).max(0.0f32);
+                    let shadow_res = trace(&shadow_point_orig, &light_dir, scene.get_objects());
+                    let in_shadow = match shadow_res {
+                        Some(v) => v.t_near * v.t_near < light_distance2,
+                        _ => false,
+                    };
+
+                    light_amt += if in_shadow {
+                        glm::vec3(0., 0., 0.)
+                    } else {
+                        light.intensity * LdotN
+                    };
+                    let reflection_direction = reflect(&-light_dir, &n);
+                    specular_color += (-glm::dot(&reflection_direction, &dir))
+                        .max(0.)
+                        .powf(payload.hit_obj.get_base().specular_exponent) * light.intensity;
+                }
+
+                hit_color =
+                    glm::matrix_comp_mult(&light_amt, &payload.hit_obj.eval_diffuse_color(&st))
+                        * payload.hit_obj.get_base().Kd
+                    + specular_color * payload.hit_obj.get_base().Ks;
+            }
+        }
+
+    }
+    return hit_color;
+}
+
+fn output_to_file(path: &String, frame_buffer: &Vec<glm::Vec3>, width: i32, height: i32) {
+    let mut u8_d = Vec::<u8>::new();
+    u8_d.resize((width * height * 3) as usize, 0);
+    for i in 0..(width * height) as usize {
+        for j in 0..3 as usize {
+            u8_d[i * 3 + j] = (frame_buffer[i][j].clamp(0., 1.) * 255.0) as i32 as u8;
+        }
+    }
+    image::save_buffer(&path, &u8_d, width as u32, height as u32, image::ColorType::Rgb8);
+    // // write to file
+    // let mut fp = File::create(path).unwrap();
+    // let head_str = format!("P6\n{} {}\n255\n", width, height);
+    // fp.write(head_str.as_bytes()).unwrap();
+    // for i in 0..(width * height) as usize{
+    //     let mut color3 = [0u8;3];
+    //     for j in 0..3 as usize {
+    //         color3[j] = (frame_buffer[i][j].clamp(0., 1.) * 255.0) as i32 as u8;
+    //     }
+    //     fp.write(&color3);
+    // }
 }
 
 impl RenderTrait for Renderer {
@@ -152,7 +264,7 @@ impl RenderTrait for Renderer {
     // primary rays and cast these rays into the scene. The content of the framebuffer is
     // saved to a file.
     // [/comment]
-    fn render(scene: &Scene) {
+    fn render(&self, scene: &Scene) {
         let mut frame_buffer =
             Vec::<glm::Vec3>::with_capacity((scene.width * scene.height) as usize);
 
@@ -177,6 +289,24 @@ impl RenderTrait for Renderer {
             }
         }
 
-        // write to file
+       output_to_file(&"binary.png".to_string(), &frame_buffer, scene.width, scene.height);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Render::output_to_file;
+
+    #[test]
+    fn write_to_file() {
+        let mut frame_buffer = Vec::<glm::Vec3>::with_capacity(4);
+        frame_buffer.push(glm::vec3(1., 0., 0.));
+        frame_buffer.push(glm::vec3(0., 1., 0.));
+        frame_buffer.push(glm::vec3(0., 0., 1.));
+        frame_buffer.push(glm::vec3(1., 1., 0.));
+        output_to_file(&"test.png".to_string(), &frame_buffer, 2, 2);
+
+        // let d = std::fs::read(&"test.png".to_string()).unwrap();
+        // println!("data:{:?}", d);
     }
 }

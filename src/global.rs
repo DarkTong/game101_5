@@ -29,6 +29,7 @@ pub fn solve_quadratic(a:f32, b:f32, c:f32, x0:&mut f32, x1:&mut f32) -> bool{
     return true;
 }
 
+#[derive(Copy, Clone)]
 pub enum MaterialType{
     DIFFUSE_AND_GLOSSY,
     REFLECTION_AND_REFRACTION,

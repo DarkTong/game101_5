@@ -1,6 +1,6 @@
 
 use crate::Object::*;
-use crate::global::solve_quadratic;
+use crate::global::{solve_quadratic, MaterialType};
 
 pub struct Sphere {
     pub object: Object,
@@ -21,6 +21,14 @@ impl Sphere {
 }
 
 impl ObjectTrait for Sphere {
+    fn get_base(&self) -> &Object {
+        return &self.object;
+    }
+
+    fn get_material_type(&self) -> MaterialType{
+        return self.object.material_type;
+    }
+
     fn intersect(&self, orig: &glm::Vec3, dir: &glm::Vec3, tnear: &mut f32,
                  _: &mut u32, _: &mut glm::Vec2) -> bool {
         let L = orig - self.center;

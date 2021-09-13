@@ -7,6 +7,7 @@ mod Light;
 mod Render;
 
 extern crate nalgebra_glm as glm;
+extern crate image;
 
 const WIDTH   :u32 = 120u32;
 const HEIGHT  :u32 = 120u32;

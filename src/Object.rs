@@ -23,6 +23,10 @@ impl Object {
 }
 
 pub trait ObjectTrait {
+    fn get_base(&self) -> &Object;
+
+    fn get_material_type(&self) -> MaterialType;
+
     fn intersect(&self, _: &glm::Vec3, _: &glm::Vec3, _: &mut f32, _: &mut u32, _: &mut glm::Vec2) -> bool;
 
     fn get_surface_properties(&self, _: &glm::Vec3, _: &glm::Vec3, _: &u32, _: &glm::Vec2, _: &mut glm::Vec3, _: &mut glm::Vec2);

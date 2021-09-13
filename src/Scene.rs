@@ -28,7 +28,7 @@ impl Scene {
             width,
             height,
             fov: 90.0,
-            background_color: glm::vec3(0.235294, 0.67451, 0.843137);
+            background_color: glm::vec3(0.235294, 0.67451, 0.843137),
             max_depth: 5,
             epsilon: 0.00001,
             objects: Vec::new(),

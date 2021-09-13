@@ -8,3 +8,4 @@ edition = "2018"
 [dependencies]
 nalgebra-glm = "0.15.0"
 rand = "0.8.4"
+image = "0.23.14"
