@@ -5,6 +5,10 @@ mod Triangle;
 mod Scene;
 mod Light;
 mod Render;
+mod Material;
+mod Intersection;
+mod AreaLight;
+mod Bounds3;
 
 extern crate nalgebra_glm as glm;
 extern crate image;
