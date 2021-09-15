@@ -1,6 +1,7 @@
 use std::slice::from_raw_parts_mut;
+use crate::Ray::*;
 
-struct Bounds3 {
+pub struct Bounds3 {
     pub p_min: glm::Vec3,
     pub p_max: glm::Vec3,
 }
@@ -81,4 +82,33 @@ impl Bounds3 {
         return r[0] && r[1] && r[2];
     }
 
+    pub fn inside(p: &glm::Vec3, b: &Bounds3) -> bool{
+        return glm::min2(&b.p_min, &p) == b.p_min &&
+            glm::max2(&p, &b.p_max) == b.p_max;
+    }
+
+    pub fn intersect_p(&self, ray: &Ray) -> bool {
+        let _min = (self.p_min - ray.origin) * ray.direction_inv;
+        let _max = (self.p_max - ray.origin) * ray.direction_inv;
+        let _t = _max - _min;
+        if _min.x < 0. || _min.y < 0. || _min.z < 0. ||
+            _max.x < 0. || _max.y < 0. || _max.z < 0. ||
+            _t.x < 0. || _t.y < 0. || _t.z < 0. {
+            return false;
+        }
+        return true;
+    }
+
+}
+
+pub fn Union(b1: &Bounds3, b2: &Bounds3) -> Bounds3{
+    let p_min = glm::min2(&b1.p_min, &b2.p_min);
+    let p_max = glm::min2(&b1.p_max, &b2.p_max);
+    return Bounds3 { p_min, p_max }
+}
+
+pub fn Union1(b: &Bounds3, p: &glm::Vec3) -> Bounds3{
+    let p_min = glm::min2(&b1.p_min, p);
+    let p_max = glm::min2(&b1.p_max, p);
+    return Bounds3 { p_min, p_max }
 }

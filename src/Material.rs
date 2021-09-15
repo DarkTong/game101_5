@@ -6,7 +6,7 @@ pub enum MaterialType{
     REFLECTION
 }
 
-struct Material {
+pub struct Material {
     pub m_type: MaterialType,
     pub m_color: glm::Vec3,
     pub m_emission: glm::Vec3,

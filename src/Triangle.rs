@@ -2,9 +2,12 @@
 use crate::Object::*;
 use std::panic::panic_any;
 use crate::global::MaterialType;
+use crate::Material::Material;
+use std::default::default;
 
-fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3, v2: &glm::Vec3,
-                        orig: &glm::Vec3, dir: &glm::Vec3, tnear: &mut f32, u: &mut f32, v: &mut f32) -> bool {
+fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3,
+                          v2: &glm::Vec3, orig: &glm::Vec3,
+                          dir: &glm::Vec3, tnear: &mut f32, u: &mut f32, v: &mut f32) -> bool {
     let e1 = v1 - v0;
     let e2 = v2 - v0;
     let s = orig - v0;
@@ -30,19 +33,44 @@ fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3, v2: &glm::Vec3,
     return false;
 }
 
+#[derive(Default)]
+pub struct Triangle {
+    pub v0: glm::Vec3,
+    pub v1: glm::Vec3,
+    pub v2: glm::Vec3,
+    pub e0: glm::Vec3,
+    pub e1: glm::Vec3,
+    pub t0: glm::Vec3,
+    pub t1: glm::Vec3,
+    pub t2: glm::Vec3,
+    pub normal: glm::Vec3,
+}
+
 pub struct MeshTriangle {
-    pub object: Object,
     pub num_triangles: u32,
     pub vertices: Vec<glm::Vec3>,
     pub indices: Vec<u32>,
     pub st_coordinates: Vec<glm::Vec2>,
+    pub m: Box<Material>
+}
+
+impl Triangle {
+    pub fn new(_v0: &glm::Vec3, _v1: &glm::Vec3, _v2: &glm::Vec3) -> Triangle{
+        Triangle {
+            v0: _v0.clone(),
+            v1: _v1.clone(),
+            v2: _v2.clone(),
+            e0: _v1 - _v0,
+            e1: _v2 - _v0,
+            ..default::Default()
+        }
+    }
 }
 
 impl MeshTriangle {
     pub fn new(vertices: Vec<glm::Vec3>, indices: Vec<u32>,
                num_triangles: u32, st_coordinates: Vec<glm::Vec2>) -> MeshTriangle {
         MeshTriangle {
-            object: Object::new(),
             num_triangles,
             vertices,
             indices,
