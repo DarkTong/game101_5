@@ -4,6 +4,9 @@ use std::panic::panic_any;
 use crate::global::MaterialType;
 use crate::Material::Material;
 use std::default::default;
+use crate::Bounds3::Bounds3;
+use crate::Ray::Ray;
+use crate::Intersection::Intersection;
 
 fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3,
                           v2: &glm::Vec3, orig: &glm::Vec3,
@@ -33,7 +36,6 @@ fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3,
     return false;
 }
 
-#[derive(Default)]
 pub struct Triangle {
     pub v0: glm::Vec3,
     pub v1: glm::Vec3,
@@ -47,15 +49,17 @@ pub struct Triangle {
 }
 
 pub struct MeshTriangle {
+    pub bounding_box: Bounds3,
     pub num_triangles: u32,
     pub vertices: Vec<glm::Vec3>,
     pub indices: Vec<u32>,
     pub st_coordinates: Vec<glm::Vec2>,
+    pub triangles: Vec<Triangle>,
     pub m: Box<Material>
 }
 
-impl Triangle {
-    pub fn new(_v0: &glm::Vec3, _v1: &glm::Vec3, _v2: &glm::Vec3) -> Triangle{
+impl Default for Triangle {
+    fn default() -> Self {
         Triangle {
             v0: _v0.clone(),
             v1: _v1.clone(),
@@ -69,26 +73,30 @@ impl Triangle {
 
 impl MeshTriangle {
     pub fn new(vertices: Vec<glm::Vec3>, indices: Vec<u32>,
-               num_triangles: u32, st_coordinates: Vec<glm::Vec2>) -> MeshTriangle {
+               num_triangles: u32, st_coordinates: Vec<glm::Vec2>) -> Self {
         MeshTriangle {
+            bounding_box: Bounds3::default(),
             num_triangles,
             vertices,
             indices,
-            st_coordinates
+            st_coordinates,
+            triangles: Vec::new(),
+            m: Box::new(Material::default(None, None, None)),
         }
     }
 }
 
 impl ObjectTrait for MeshTriangle {
-    fn get_base(&self) -> &Object {
-        return &self.object;
+    fn intersect_check(&self, ray: &Ray) -> bool {
+        let mut _1 = 0.;
+        let mut _2 = 0;
+        return self.intersect_nearest(ray, &mut _1, &mut _2);
     }
-    fn get_material_type(&self) -> MaterialType {
-        return self.object.material_type;
-    }
-    fn intersect(&self, orig: &glm::Vec3, dir: &glm::Vec3,
-                 tnear: &mut f32, index: &mut u32, uv: &mut glm::Vec2) -> bool {
+    
+    fn intersect_nearest(&self, ray: &Ray, t_near: &mut f32, index: &mut u32) -> bool {
         let mut intersect = false;
+        let orig = &ray.origin;
+        let dir = &ray.direction;
 
         for k in 0..self.num_triangles as usize {
             let v0 = &self.vertices[self.indices[k * 3 + 0] as usize];
@@ -108,6 +116,10 @@ impl ObjectTrait for MeshTriangle {
         }
 
         return intersect;
+    }
+
+    fn get_intersection(&self, ray: &Ray) -> Intersection {
+        todo!()
     }
 
     fn get_surface_properties(&self, _: &glm::Vec3, _: &glm::Vec3, index: &u32, uv: &glm::Vec2, n: &mut glm::Vec3, st: &mut glm::Vec2) {

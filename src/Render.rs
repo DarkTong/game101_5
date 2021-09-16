@@ -4,6 +4,7 @@ use crate::global::{M_PI, MaterialType};
 use std::fs::File;
 use std::io::Write;
 use std::mem::transmute;
+use crate::Material::MaterialType;
 
 pub struct hit_payload<'a> {
     pub hit_obj: &'a Box<dyn ObjectTrait>,
@@ -151,11 +152,11 @@ fn cast_ray(orig: &glm::Vec3, dir: &glm::Vec3, scene: &Scene, depth: i32) -> glm
     }
 
     let mut hit_color = scene.background_color.clone();
-    if let Some(payload) = trace(orig, dir, scene.get_objects()) {
+    if let Some(mut payload) = trace(orig, dir, scene.get_objects()) {
         let hit_point = orig + dir * payload.t_near;
         let mut n = glm::vec3(0., 0., 0.);
         let mut st = glm::vec2(0., 0.);
-        payload.hit_obj.get_surface_properties(&hit_point, &dir, &payload.index, &payload.uv, &mut n, &mut st);
+        payload.hit_obj.get_surface_properties(&hit_point, &dir, payload.index, &mut payload.uv, &mut n, &mut st);
         match payload.hit_obj.get_material_type() {
             MaterialType::REFLECTION_AND_REFRACTION => {
                 let reflection_direction = glm::normalize(&reflect(&dir, &n));

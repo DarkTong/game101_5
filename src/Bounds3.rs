@@ -6,8 +6,8 @@ pub struct Bounds3 {
     pub p_max: glm::Vec3,
 }
 
-impl Bounds3 {
-    pub fn default() -> Bounds3 {
+impl Default for Bounds3 {
+    fn default() -> Self {
         let max_f32 = f32::INFINITY;
         let min_f32 = f32::NEG_INFINITY;
         Bounds3 {
@@ -15,7 +15,9 @@ impl Bounds3 {
             p_max: glm::vec3(min_f32, min_f32, min_f32),
         }
     }
+}
 
+impl Bounds3 {
     pub fn new1(p1: &glm::Vec3, p2: &glm::Vec3) -> Bounds3 {
         let p_min = glm::vec3(
           f32::min(p1.x, p2.x),
@@ -91,8 +93,7 @@ impl Bounds3 {
         let _min = (self.p_min - ray.origin) * ray.direction_inv;
         let _max = (self.p_max - ray.origin) * ray.direction_inv;
         let _t = _max - _min;
-        if _min.x < 0. || _min.y < 0. || _min.z < 0. ||
-            _max.x < 0. || _max.y < 0. || _max.z < 0. ||
+        if _max.x < 0. || _max.y < 0. || _max.z < 0. ||
             _t.x < 0. || _t.y < 0. || _t.z < 0. {
             return false;
         }

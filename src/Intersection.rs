@@ -11,8 +11,8 @@ pub struct Intersection<'a> {
     pub m: Option<&'a Box<Material>>
 }
 
-impl Intersection {
-    pub fn new() -> Intersection {
+impl Default for Intersection {
+    fn default() -> Self {
         Intersection {
             happend: false,
             coords: glm::zero(),

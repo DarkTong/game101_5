@@ -10,6 +10,7 @@ mod Intersection;
 mod AreaLight;
 mod Bounds3;
 mod Ray;
+mod BVH;
 
 extern crate nalgebra_glm as glm;
 extern crate image;
