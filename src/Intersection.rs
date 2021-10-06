@@ -1,25 +1,26 @@
-use crate::Object::ObjectTrait;
-use crate::Material::*;
-use std::ptr::null;
+use crate::Material::Material;
 
-struct Intersection<'a> {
-    pub happend: bool,
+pub struct IntersectData<'a> {
     pub coords: glm::Vec3,
+    pub distance: f32,
+    pub index: i32,
     pub normal: glm::Vec3,
-    pub distance: f64,
-    pub obj: Option<&'a Box<dyn ObjectTrait>>,
-    pub m: Option<&'a Box<Material>>
+    pub uv: glm::Vec2,
+    pub st: glm::Vec2,
+    pub m: &'a Material,
+    pub eval_diffuse_color: glm::Vec3,
 }
 
-impl Intersection {
-    pub fn new() -> Intersection {
-        Intersection {
-            happend: false,
-            coords: glm::zero(),
-            normal: glm::zero(),
-            distance: f64::INFINITY,
-            obj: None,
-            m: None
-        }
-    }
-}
+// impl<'a> Default for IntersectData<'a> {
+//     fn default() -> Self {
+//         IntersectData {
+//             coords: glm::zero(),
+//             distance: 0.,
+//             index: -1,
+//             normal: glm::vec3(0., 0., 1.),
+//             uv: glm::zero(),
+//             st: glm::zero(),
+//             eval_diffuse_color: glm::zero(),
+//         }
+//     }
+// }

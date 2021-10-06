@@ -1,23 +1,25 @@
 mod global;
 mod Object;
+mod Intersection;
 mod Sphere;
 mod Triangle;
 mod Scene;
 mod Light;
 mod Render;
 mod Material;
-mod Intersection;
 mod AreaLight;
 mod Bounds3;
+mod Ray;
+mod BVH;
+mod bvh;
+mod Render;
 
 extern crate nalgebra_glm as glm;
 extern crate image;
 
-use crate::global::MaterialType;
 use crate::Object::ObjectTrait;
 use image::error::ImageError::Limits;
 use crate::Scene::{AddLight, AddObject};
-use crate::Render::{Renderer, RenderTrait};
 
 const SCALE     :i32 = 10;
 const WIDTH     :i32 = 128i32   * SCALE;

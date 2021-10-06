@@ -1,6 +1,7 @@
-use std::slice::from_raw_parts_mut;
+use crate::Ray::Ray;
 
-struct Bounds3 {
+#[derive(Clone)]
+pub(crate) struct Bounds3 {
     pub p_min: glm::Vec3,
     pub p_max: glm::Vec3,
 }
@@ -15,7 +16,7 @@ impl Bounds3 {
         }
     }
 
-    pub fn new1(p1: &glm::Vec3, p2: &glm::Vec3) -> Bounds3 {
+    pub fn new(p1: &glm::Vec3, p2: &glm::Vec3) -> Bounds3 {
         let p_min = glm::vec3(
           f32::min(p1.x, p2.x),
           f32::min(p1.y, p2.y),
@@ -36,7 +37,7 @@ impl Bounds3 {
         return self.p_max - self.p_min;
     }
 
-    pub fn max_extent(&self) -> i32 {
+    pub fn max_extent(&self) -> usize {
         let d = self.diagonal();
         return if d.x > d.y && d.x > d.z {
             0
@@ -57,10 +58,25 @@ impl Bounds3 {
     }
 
     pub fn intersect(&self, b: &Bounds3) -> Bounds3{
-        Bounds3::new1(
+        Bounds3::new(
             &glm::max2(&self.p_min, &b.p_min),
             &glm::min2(&self.p_max, &b.p_max)
         )
+    }
+
+    pub fn intersect_p(&self, p: &glm::Vec3) -> Bounds3{
+        let p_min = glm::max2(&self.p_min, p);
+        let p_max = glm::min2(&self.p_max, p);
+        return Bounds3 {
+            p_min, p_max
+        };
+    }
+    pub fn intersect_ray(&self, ray: &Ray) -> bool{
+        let t1 = (self.p_min - ray.origin) * ray.direction_inv;
+        let t2 = (self.p_max - ray.origin) * ray.direction_inv;
+        let t_min = glm::comp_min(&glm::min2(&t1, &t2));
+        let t_max = glm::comp_max(&glm::max2(&t1, &t2));
+        return if t_min <= t_max && t_max > 0 { true } else { false };
     }
 
     pub fn offset(&self, p: &glm::Vec3) -> glm::Vec3 {
@@ -81,4 +97,19 @@ impl Bounds3 {
         return r[0] && r[1] && r[2];
     }
 
+    pub fn union(b1: &Bounds3, b2: &Bounds3) -> Bounds3 {
+        let p_min = glm::min2(&b1.p_min, &b2.p_min);
+        let p_max = glm::max2(&b1.p_max, &b2.p_max);
+        Bounds3 {
+            p_min, p_max
+        }
+    }
+
+    pub fn union_p(&self, p: &glm::Vec3) -> Bounds3 {
+        let p_min = glm::min2(&self.p_min, &p);
+        let p_max = glm::max2(&self.p_max, &p);
+        Bounds3 {
+            p_min, p_max
+        }
+    }
 }

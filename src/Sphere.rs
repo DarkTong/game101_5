@@ -1,81 +1,92 @@
+use crate::Bounds3::Bounds3;
+use crate::global::*;
+use crate::Object::ObjectTrait;
+use crate::Material::{Material};
+use crate::Intersection::IntersectData;
 
-use crate::Object::*;
-use crate::global::{solve_quadratic, MaterialType};
-
-pub struct Sphere {
-    pub object: Object,
-    pub center: glm::Vec3,
-    pub radius: f32,
-    pub radius2: f32
+pub struct Sphere<'a> {
+    pub center          : glm::Vec3,
+    pub radius          : f32,
+    pub radius2         : f32,
+    pub m               : &'a Material,
 }
 
-impl Sphere {
-    pub fn new(c: &glm::Vec3, r: f32) -> Sphere {
+impl<'a> Sphere<'a> {
+    pub fn new(center: &glm::Vec3, radius: f32, m: &'a Material) -> Self {
         Sphere {
-            object: Object::new(),
-            center: c.clone(),
-            radius: r,
-            radius2: r*r,
+            center: center.clone(),
+            radius,
+            radius2: radius* radius,
+            m,
         }
     }
 }
 
-impl ObjectTrait for Sphere {
-    fn get_base(&self) -> &Object {
-        return &self.object;
-    }
-
-    fn get_material_type(&self) -> MaterialType{
-        return self.object.material_type;
-    }
-
-    fn intersect(&self, orig: &glm::Vec3, dir: &glm::Vec3, tnear: &mut f32,
-                 _: &mut u32, _: &mut glm::Vec2) -> bool {
-        let L = orig - self.center;
-        let a = glm::dot(&dir, &dir);
-        let b = 2.0 * glm::dot(&dir, &L);
+impl<'a> ObjectTrait for Sphere<'a> {
+    fn get_intersection(&self, ray: &crate::Ray::Ray) -> Option<IntersectData> {
+        let L = ray.origin - self.center;
+        let a = glm::dot(&ray.direction, &ray.direction);
+        let b = 2.0 * glm::dot(&ray.direction, &L);
         let c = glm::dot(&L, &L) - self.radius2;
-        let mut t0 = 0.0f32;
-        let mut t1 = 0.0f32;
+        let t0 = 0.0f32;
+        let t1 = 0.0f32;
         if !solve_quadratic(a, b, c, &mut t0, &mut t1) {
-            return false;
+            return None;
         }
-        if t0 < 0.0 {
-            t0 = t1;
-        }
-        if t0 < 0.0 {
-            return false;
-        }
-        *tnear = t0;
-        return true;
+        if t0 < 0.0 { t0 = t1; }
+        if t0 < 0.0 { return None;}
+
+        let coords = ray.origin + t0 * ray.direction;
+
+
+        return Some(IntersectData {
+            coords: coords.clone(),
+            normal: (coords - self.center).normalize(),
+            distance: t0,
+            index: -1,
+            m: self.m,
+            eval_diffuse_color: self.m.get_color(),
+            uv: glm::zero(),
+            st: glm::zero(),
+        });
     }
 
-    fn get_surface_properties(&self, p: &glm::Vec3, _: &glm::Vec3, _: &u32,
-                              _: &glm::Vec2, n: &mut glm::Vec3, _: &mut glm::Vec2) {
-        *n = (p - self.center).normalize();
+    fn get_bounds(&self) -> Bounds3 {
+        let _r3 = glm::vec3(self.radius, self.radius, self.radius);
+        let p_min = self.center - _r3;
+        let p_max = self.center + _r3;
+
+        Bounds3 { p_min, p_max }
     }
 
-    fn eval_diffuse_color(&self, _: &glm::Vec2) -> glm::Vec3 {
-        return self.object.diffuse_color;
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::Sphere::Sphere;
     use crate::Object::ObjectTrait;
+    use crate::Sphere::Sphere;
+    use crate::Ray::Ray;
+    use crate::Material::S_MATERIAL;
 
     #[test]
     fn test_sphere_intersect() {
-        let s = Sphere::new(&glm::vec3(1., 1., 1.), 1.);
+        let s = Sphere::new(&glm::vec3(1., 1., 1.), 1., &S_MATERIAL);
 
         let mut t_near = 0f32;
         let mut _1 = 0u32;
-        let mut _2 = glm::vec2(0., 0.);
-        let r = s.intersect(&glm::vec3(0., 0., 0.), &glm::vec3(1., 1., 0.).normalize(), &mut t_near, &mut _1, &mut _2);
-        assert!(r && f32::abs(t_near - 2.0_f32.sqrt()) < 0.001,  format!("{}:{}", r, t_near));
-        let r = s.intersect(&glm::vec3(0., 0., 0.), &glm::vec3(1., 1., 1.).normalize(), &mut t_near, &mut _1, &mut _2);
-        assert!(r && f32::abs(t_near - (3.0_f32.sqrt() - 1.0)) < 0.001, format!("{}:{}", r, t_near));
+        let ray = Ray::new(
+            &glm::vec3(0., 0., 0.),
+            &glm::vec3(1., 1., 0.).normalize()
+        );
+        let inter = s.get_intersection(&ray).unwrap();
+        assert!(f32::abs(inter.distance - 2.0_f32.sqrt()) < 0.001,  format!("{}", inter.distance));
+
+        let ray = Ray::new(
+            &glm::vec3(0., 0., 0.),
+            &glm::vec3(1., 1., 1.).normalize(),
+        );
+        let inter = s.get_intersection(&ray).unwrap();
+        assert!(f32::abs(inter.distance - (3.0_f32.sqrt() - 1.0)) < 0.001, format!("{}", inter.distance));
     }
 }
 
