@@ -6,8 +6,8 @@ pub(crate) struct Bounds3 {
     pub p_max: glm::Vec3,
 }
 
-impl Bounds3 {
-    pub fn default() -> Bounds3 {
+impl Default for Bounds3 {
+    fn default() -> Self {
         let max_f32 = f32::INFINITY;
         let min_f32 = f32::NEG_INFINITY;
         Bounds3 {
@@ -15,6 +15,7 @@ impl Bounds3 {
             p_max: glm::vec3(min_f32, min_f32, min_f32),
         }
     }
+}
 
     pub fn new(p1: &glm::Vec3, p2: &glm::Vec3) -> Bounds3 {
         let p_min = glm::vec3(
