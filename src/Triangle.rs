@@ -1,7 +1,7 @@
 
 use rand::seq::index::IndexVec;
 
-use crate::{Bounds3::Bounds3, Intersection::IntersectData, Material::Material, Object::*};
+use crate::{BVH::{BVHAccel, SplitMethod}, Bounds3::Bounds3, Intersection::IntersectData, Material, Object::*};
 
 fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3, v2: &glm::Vec3,
                         orig: &glm::Vec3, dir: &glm::Vec3, tnear: &mut f32, 
@@ -49,7 +49,8 @@ impl<'a> Triangle<'a> {
     fn iv1(&self) -> usize { return self._d.indices[self.ind as usize + 1] as usize; }
     fn iv2(&self) -> usize { return self._d.indices[self.ind as usize + 2] as usize; }
 
-    fn get_surface_properties(&self, P: &nalgebra_glm::Vec3, 
+    fn get_surface_properties(&self, 
+        P: &nalgebra_glm::Vec3, 
         N: &mut nalgebra_glm::Vec3, 
         st: &mut nalgebra_glm::Vec2) 
     {
@@ -69,7 +70,25 @@ impl<'a> Triangle<'a> {
         *st = st0 * (1.0 - uv.x - uv.y) + st1 * uv.x + st2 * uv.y;
     }
 
+    fn get_st(&self, uv: &glm::Vec2) -> glm::Vec2{
+        let st0 = &self._d.st_coordinates[self._d.indices[(self.ind * 3 + 0) as usize] as usize];
+        let st1 = &self._d.st_coordinates[self._d.indices[(self.ind * 3 + 1) as usize] as usize];
+        let st2 = &self._d.st_coordinates[self._d.indices[(self.ind * 3 + 2) as usize] as usize];
 
+        let st = st0 * (1.0 - uv.x - uv.y) + st1 * uv.x + st2 * uv.y;
+        return st;
+    }
+
+    fn eval_diffuse_color(&self, st: &glm::Vec2) -> glm::Vec3 {
+        let scale = 5.0f32;
+        let pattern = ((st.x * scale).rem_euclid(1.0) > 0.5) ^ ((st.y * scale).rem_euclid(1.0) > 0.5);
+        let pattern = pattern as u32 as f32;
+        return glm::lerp(
+            &glm::vec3(0.815, 0.235, 0.031), 
+            &glm::vec3(0.937, 0.937, 0.231), 
+            pattern
+        );
+    }
 }
 
 impl<'a> ObjectTrait for Triangle<'a> {
@@ -86,14 +105,18 @@ impl<'a> ObjectTrait for Triangle<'a> {
             return None;
         }
 
-        let uv = self._d.
-        
+        let uv = glm::Vec2(u, v);
+        let st = self.get_st(&uv);
+        let color = self.eval_diffuse_color(&st);
+
         return Some(IntersectData {
             coords: glm::vec3(u, v, 1.0),
             normal: glm::zero(), // todo:
             distance: tnear,
-            index: -1,
-            m: &self._d.m,
+            index: self.ind,
+            uv, st,
+            eval_diffuse_color: color,
+            m: self._d.m,
         });
     }
 
@@ -104,16 +127,18 @@ impl<'a> ObjectTrait for Triangle<'a> {
     }
 }
 
-pub struct MeshTriangle {
+pub struct MeshTriangle<'a> {
     pub num_triangles: u32,
     pub vertices: Vec<glm::Vec3>,
     pub indices: Vec<u32>,
     pub st_coordinates: Vec<glm::Vec2>,
     pub bounding_box: Bounds3,
-    pub m: Material,
+    pub m: &Material::Material,
+    pub bvh: Option<Box<BVHAccel>>,
+    pub triangles: glm::Vec<Triangle>,
 }
 
-impl MeshTriangle {
+impl<'a> MeshTriangle<'a> {
     pub fn new(vertices: Vec<glm::Vec3>, indices: Vec<u32>,
                num_triangles: u32, st_coordinates: Vec<glm::Vec2>) -> MeshTriangle 
     {
@@ -121,49 +146,36 @@ impl MeshTriangle {
         for vert in vertices.iter() {
             bounding_box = bounding_box.intersect_p(vert);
         }
+        
 
-        MeshTriangle {
+        let mut mesh_triangle = MeshTriangle {
             num_triangles,
             vertices,
             indices,
             st_coordinates,
             bounding_box,
+            triangles: Vec::new(),
+            m: &Material::S_MATERIAL,
+            bvh: None
+        };
+
+        let object_vec = Vec::with_capacity(num_triangles as usize);
+        let triangles = Vec::with_capacity(num_triangles as usize);
+        for i in 0..num_triangles {
+            let tri = Triangle::new(&mesh_triangle, i);
+            object_vec.push(&tri);
+            triangles.push(tri);
         }
+        let bvh = Box::new(BVHAccel(object_vec, 0, SplitMethod::NAIVE));
+        mesh_triangle.triangles = triangles;
+        mesh_triangle.bvh = Some(bvh);
+
+        mesh_triangle
     }
 
 }
 
 impl ObjectTrait for MeshTriangle {
-    fn get_surface_properties(&self, P: &nalgebra_glm::Vec3, I: &nalgebra_glm::Vec3, 
-        index: &u32, uv: &nalgebra_glm::Vec2, N: &mut nalgebra_glm::Vec3, 
-        st: &mut nalgebra_glm::Vec2) 
-    {
-        let v0 = &self.vertices[self.indices[(index * 3 + 0) as usize] as usize];
-        let v1 = &self.vertices[self.indices[(index * 3 + 1) as usize] as usize];
-        let v2 = &self.vertices[self.indices[(index * 3 + 2) as usize] as usize];
-
-        let e0 = (v1 - v0).normalize();
-        let e1 = (v2 - v1).normalize();
-        *N = glm::cross(&e0, &e1).normalize();
-
-        let st0 = &self.st_coordinates[self.indices[(index * 3 + 0) as usize] as usize];
-        let st1 = &self.st_coordinates[self.indices[(index * 3 + 1) as usize] as usize];
-        let st2 = &self.st_coordinates[self.indices[(index * 3 + 2) as usize] as usize];
-
-        *st = st0 * (1.0 - uv.x - uv.y) + st1 * uv.x + st2 * uv.y;
-    }
-
-    fn eval_diffuse_color(&self, st: &glm::Vec2) -> glm::Vec3 {
-        let scale = 5.0f32;
-        let pattern = ((st.x * scale).rem_euclid(1.0) > 0.5) ^ ((st.y * scale).rem_euclid(1.0) > 0.5);
-        let pattern = pattern as u32 as f32;
-        return glm::lerp(
-            &glm::vec3(0.815, 0.235, 0.031), 
-            &glm::vec3(0.937, 0.937, 0.231), 
-            pattern
-        );
-    }
-
     fn get_bounds(&self) -> Bounds3 {
         return self.bounding_box.clone();
     }
@@ -171,8 +183,6 @@ impl ObjectTrait for MeshTriangle {
     fn get_intersection(&self, ray: &crate::Ray::Ray) -> Option<IntersectData> {
         todo!()
     }
-
-
 }
 
 #[cfg(test)]
