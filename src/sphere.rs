@@ -1,8 +1,8 @@
-use crate::_bounds3::Bounds3;
-use crate::_global::*;
-use crate::_object::ObjectTrait;
-use crate::_material::{Material};
-use crate::_intersection::IntersectData;
+use crate::bounds3::Bounds3;
+use crate::global::*;
+use crate::object::ObjectTrait;
+use crate::material::{Material};
+use crate::intersection::IntersectData;
 
 pub struct Sphere<'a> {
     pub center          : glm::Vec3,
@@ -23,7 +23,7 @@ impl<'a> Sphere<'a> {
 }
 
 impl<'a> ObjectTrait for Sphere<'a> {
-    fn get_intersection(&self, ray: &crate::_ray::Ray) -> Option<IntersectData> {
+    fn get_intersection(&self, ray: &crate::ray::Ray) -> Option<IntersectData> {
         let L = ray.origin - self.center;
         let a = glm::dot(&ray.direction, &ray.direction);
         let b = 2.0 * glm::dot(&ray.direction, &L);
@@ -63,14 +63,14 @@ impl<'a> ObjectTrait for Sphere<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::_material;
-    use crate::_object::ObjectTrait;
-    use crate::_sphere::Sphere;
-    use crate::_ray::Ray;
+    use crate::material;
+    use crate::object::ObjectTrait;
+    use crate::sphere::Sphere;
+    use crate::ray::Ray;
 
     #[test]
     fn test_sphere_intersect() {
-        let mat = _material::Material::default();
+        let mat = material::Material::default();
         let s = Sphere::new(&glm::vec3(1., 1., 1.), 1., &mat);
 
         let mut t_near = 0f32;

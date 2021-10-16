@@ -161,7 +161,7 @@ pub fn load_mesh(path: String)
 }
 #[cfg(test)]
 mod tests {
-    use crate::_global::update_progress;
+    use crate::global::update_progress;
 
     #[test]
     fn test_update_progress() {

@@ -1,10 +1,10 @@
-use crate::_global::*;
-use crate::_intersection::IntersectData;
-use crate::_object::ObjectTrait;
-use crate::_light::Light;
-use crate::_ray::Ray;
-use crate::_bvh::{BVHAccel, SplitMethod};
-use crate::_material::*;
+use crate::global::*;
+use crate::intersection::IntersectData;
+use crate::object::ObjectTrait;
+use crate::light::Light;
+use crate::ray::Ray;
+use crate::bvh::{BVHAccel, SplitMethod};
+use crate::material::*;
 use std::boxed::Box;
 
 pub struct Scene<'a> {

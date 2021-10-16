@@ -1,5 +1,5 @@
-use crate::_light::Light;
-use crate::_global::get_random_f32;
+use crate::light::Light;
+use crate::global::get_random_f32;
 
 struct AreaLight {
     pub base: Light,

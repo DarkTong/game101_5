@@ -1,7 +1,7 @@
-use crate::_intersection::IntersectData;
-use crate::_object::ObjectTrait;
-use crate::_bounds3::Bounds3;
-use crate::_ray::Ray;
+use crate::intersection::IntersectData;
+use crate::object::ObjectTrait;
+use crate::bounds3::Bounds3;
+use crate::ray::Ray;
 
 pub enum SplitMethod {
     NAIVE,

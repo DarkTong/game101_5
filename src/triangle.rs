@@ -1,6 +1,7 @@
 
 
-use crate::{_bvh::{BVHAccel, SplitMethod}, _bounds3::Bounds3, _intersection::IntersectData, _material, _object::*};
+use crate::{bvh::{BVHAccel, SplitMethod}, bounds3::Bounds3, intersection::IntersectData, object::*};
+use crate::material;
 
 fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3, v2: &glm::Vec3,
                         orig: &glm::Vec3, dir: &glm::Vec3, tnear: &mut f32, 
@@ -70,7 +71,7 @@ impl<'a> Triangle<'a> {
 }
 
 impl<'a> ObjectTrait for Triangle<'a> {
-    fn get_intersection(&self, ray: &crate::_ray::Ray) -> Option<IntersectData> {
+    fn get_intersection(&self, ray: &crate::ray::Ray) -> Option<IntersectData> {
         let mut tnear = 0f32;
         let mut u = 0f32;
         let mut v = 0f32;
@@ -98,7 +99,7 @@ impl<'a> ObjectTrait for Triangle<'a> {
         });
     }
 
-    fn get_bounds(&self) -> crate::_bounds3::Bounds3 {
+    fn get_bounds(&self) -> crate::bounds3::Bounds3 {
         let b1 = Bounds3::new(&self.v0(), &self.v1());
         let b2 = Bounds3::new(&self.v0(), &self.v1());
         return Bounds3::intersect(&b1, &b2);
@@ -110,7 +111,7 @@ pub struct SMeshData<'a> {
     pub vertices: Vec<glm::Vec3>,
     pub indices: Vec<u32>,
     pub st_coordinates: Vec<glm::Vec2>,
-    pub m: &'a _material::Material,
+    pub m: &'a material::Material,
 }
 
 pub struct MeshTriangle<'a> {
@@ -125,7 +126,7 @@ impl<'a> MeshTriangle<'a> {
         vertices: Vec<glm::Vec3>, 
         st_coordinates: Vec<glm::Vec2>,
         indices: Vec<u32>,
-        mat: &'a _material::Material,
+        mat: &'a material::Material,
     ) -> MeshTriangle<'a>
     {
         let mut bounding_box = Bounds3::new(&vertices[0], &vertices[1]);   
@@ -174,14 +175,14 @@ impl<'a> ObjectTrait for MeshTriangle<'a> {
         return self.bounding_box.clone();
     }
 
-    fn get_intersection(&self, ray: &crate::_ray::Ray) -> Option<IntersectData> {
+    fn get_intersection(&self, ray: &crate::ray::Ray) -> Option<IntersectData> {
         return self.bvh.as_ref().unwrap().get_intersection(ray);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::_triangle::ray_triangle_intersect;
+    use crate::triangle::ray_triangle_intersect;
 
     #[test]
     fn test_ray_triangle_intersect() {
