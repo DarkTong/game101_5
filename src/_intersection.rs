@@ -1,4 +1,4 @@
-use crate::material::Material;
+use crate::_material::Material;
 
 pub struct IntersectData<'a> {
     pub coords: glm::Vec3,

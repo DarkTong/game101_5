@@ -1,4 +1,4 @@
-use crate::ray::Ray;
+use crate::_ray::Ray;
 
 #[derive(Clone)]
 pub struct Bounds3 {
