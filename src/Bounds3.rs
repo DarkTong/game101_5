@@ -1,7 +1,7 @@
 use crate::Ray::Ray;
 
 #[derive(Clone)]
-pub(crate) struct Bounds3 {
+pub struct Bounds3 {
     pub p_min: glm::Vec3,
     pub p_max: glm::Vec3,
 }
@@ -17,6 +17,7 @@ impl Default for Bounds3 {
     }
 }
 
+impl Bounds3 {
     pub fn new(p1: &glm::Vec3, p2: &glm::Vec3) -> Bounds3 {
         let p_min = glm::vec3(
           f32::min(p1.x, p2.x),
@@ -73,11 +74,21 @@ impl Default for Bounds3 {
         };
     }
     pub fn intersect_ray(&self, ray: &Ray) -> bool{
-        let t1 = (self.p_min - ray.origin) * ray.direction_inv;
-        let t2 = (self.p_max - ray.origin) * ray.direction_inv;
+        let t1 = self.p_min - ray.origin;
+        let t2 = self.p_max - ray.origin;
+        let t1 = glm::vec3(
+            t1.x * ray.direction_inv.x,
+            t1.y * ray.direction_inv.y,
+            t1.z * ray.direction_inv.z
+        );
+        let t2 = glm::vec3(
+            t2.x * ray.direction_inv.x,
+            t2.y * ray.direction_inv.y,
+            t2.z * ray.direction_inv.z
+        );
         let t_min = glm::comp_min(&glm::min2(&t1, &t2));
         let t_max = glm::comp_max(&glm::max2(&t1, &t2));
-        return if t_min <= t_max && t_max > 0 { true } else { false };
+        return if t_min <= t_max && t_max > 0.0 { true } else { false };
     }
 
     pub fn offset(&self, p: &glm::Vec3) -> glm::Vec3 {

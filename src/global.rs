@@ -129,6 +129,36 @@ pub fn fresnel(I: &glm::Vec3, N: &glm::Vec3, ior: f32) -> f32{
 }
 
 
+pub fn load_mesh(path: String) 
+    -> obj_rs::ObjResult<(
+        Vec<glm::Vec3>, Vec<glm::Vec2>, 
+        Vec<u32>
+    )> 
+{
+    use obj_rs::*;
+
+    let _file = std::fs::File::open(path)?;
+    let read_buf = std::io::BufReader::new(_file);
+
+    let wf_obj: Obj<TexturedVertex> = load_obj(read_buf)?;
+
+    let mut vertices = Vec::with_capacity(wf_obj.vertices.len());
+    let mut sts = Vec::with_capacity(wf_obj.vertices.len());
+
+    for wf_v in &wf_obj.vertices {
+        let pos = glm::vec3(wf_v.position[0], wf_v.position[1], wf_v.position[2]);
+        let uv = glm::vec2(wf_v.texture[0], wf_v.texture[1]);
+        vertices.push(pos);
+        sts.push(uv);
+    }
+
+    let mut indices = Vec::with_capacity(wf_obj.indices.len());
+    for i in 0..wf_obj.indices.len() {
+        indices.push(wf_obj.indices[i] as u32);
+    }
+
+    return Ok((vertices, sts, indices))
+}
 #[cfg(test)]
 mod tests {
     use crate::global::update_progress;

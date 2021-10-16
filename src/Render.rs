@@ -1,5 +1,6 @@
 use crate::Scene::Scene;
 use crate::global::*;
+use crate::Ray::*;
 
 
 pub trait RenderTrait {
@@ -56,8 +57,8 @@ impl RenderTrait for Renderer {
                 let x = (2.0 / scene.width  as f32 * (i as f32 + 0.5) - 1.0f32) * scale * image_aspect_radio;
                 let y = (2.0 / scene.height as f32 * (j as f32 + 0.5) - 1.0f32) * scale * -1.0f32;
 
-                let dir = glm::vec3(x, y, -1.0);
-                frame_buffer[m] = scene.cast_ray(&eye_pos, &dir, &scene, 0);
+                let dir = glm::vec3(x, y, -1.0).normalize();
+                frame_buffer[m] = scene.cast_ray(&Ray::new(&eye_pos, &dir), 0);
                 m = m + 1;
             }
         }

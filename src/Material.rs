@@ -1,7 +1,3 @@
-use std::default;
-
-use nalgebra_glm::DefaultAllocator;
-
 
 #[derive(Copy, Clone)]
 pub enum MaterialType{
@@ -34,8 +30,6 @@ impl Default for Material {
         }
     }
 }
-
-pub const S_MATERIAL: Material = Material::default();
 
 impl Material {
     pub fn new(t: Option<MaterialType>, c: Option<glm::Vec3>, e: Option<glm::Vec3>) -> Material {

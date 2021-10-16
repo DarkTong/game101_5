@@ -28,8 +28,8 @@ impl<'a> ObjectTrait for Sphere<'a> {
         let a = glm::dot(&ray.direction, &ray.direction);
         let b = 2.0 * glm::dot(&ray.direction, &L);
         let c = glm::dot(&L, &L) - self.radius2;
-        let t0 = 0.0f32;
-        let t1 = 0.0f32;
+        let mut t0 = 0.0f32;
+        let mut t1 = 0.0f32;
         if !solve_quadratic(a, b, c, &mut t0, &mut t1) {
             return None;
         }
@@ -43,7 +43,7 @@ impl<'a> ObjectTrait for Sphere<'a> {
             coords: coords.clone(),
             normal: (coords - self.center).normalize(),
             distance: t0,
-            index: -1,
+            index: u32::MAX,
             m: self.m,
             eval_diffuse_color: self.m.get_color(),
             uv: glm::zero(),
@@ -63,14 +63,15 @@ impl<'a> ObjectTrait for Sphere<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::Material;
     use crate::Object::ObjectTrait;
     use crate::Sphere::Sphere;
     use crate::Ray::Ray;
-    use crate::Material::S_MATERIAL;
 
     #[test]
     fn test_sphere_intersect() {
-        let s = Sphere::new(&glm::vec3(1., 1., 1.), 1., &S_MATERIAL);
+        let mat = Material::Material::default();
+        let s = Sphere::new(&glm::vec3(1., 1., 1.), 1., &mat);
 
         let mut t_near = 0f32;
         let mut _1 = 0u32;

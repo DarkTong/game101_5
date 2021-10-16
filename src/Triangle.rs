@@ -1,5 +1,4 @@
 
-use rand::seq::index::IndexVec;
 
 use crate::{BVH::{BVHAccel, SplitMethod}, Bounds3::Bounds3, Intersection::IntersectData, Material, Object::*};
 
@@ -32,11 +31,11 @@ fn ray_triangle_intersect(v0: &glm::Vec3, v1: &glm::Vec3, v2: &glm::Vec3,
 }
 
 pub struct Triangle<'a> {
-    pub _d          : &'a MeshTriangle,
+    pub _d          : &'a SMeshData<'a>,
     pub ind         : u32,
 }
 impl<'a> Triangle<'a> {
-    pub fn new(mesh: &'a MeshTriangle, ind: u32) -> Self{
+    pub fn new(mesh: &'a SMeshData, ind: u32) -> Self{
         Triangle {
             _d: mesh, ind
         }
@@ -48,27 +47,6 @@ impl<'a> Triangle<'a> {
     fn iv0(&self) -> usize { return self._d.indices[self.ind as usize + 0] as usize; }
     fn iv1(&self) -> usize { return self._d.indices[self.ind as usize + 1] as usize; }
     fn iv2(&self) -> usize { return self._d.indices[self.ind as usize + 2] as usize; }
-
-    fn get_surface_properties(&self, 
-        P: &nalgebra_glm::Vec3, 
-        N: &mut nalgebra_glm::Vec3, 
-        st: &mut nalgebra_glm::Vec2) 
-    {
-        let v0 = self.v0();
-        let v1 = self.v1();
-        let v2 = self.v2();
-        let _d = self._d;
-
-        let e0 = (v1 - v0).normalize();
-        let e1 = (v2 - v1).normalize();
-        *N = glm::cross(&e0, &e1).normalize();
-
-        let st0 = &_d.st_coordinates[self.iv0()];
-        let st1 = &_d.st_coordinates[self.iv1()];
-        let st2 = &_d.st_coordinates[self.iv2()];
-
-        *st = st0 * (1.0 - uv.x - uv.y) + st1 * uv.x + st2 * uv.y;
-    }
 
     fn get_st(&self, uv: &glm::Vec2) -> glm::Vec2{
         let st0 = &self._d.st_coordinates[self._d.indices[(self.ind * 3 + 0) as usize] as usize];
@@ -105,7 +83,7 @@ impl<'a> ObjectTrait for Triangle<'a> {
             return None;
         }
 
-        let uv = glm::Vec2(u, v);
+        let uv = glm::vec2(u, v);
         let st = self.get_st(&uv);
         let color = self.eval_diffuse_color(&st);
 
@@ -127,61 +105,77 @@ impl<'a> ObjectTrait for Triangle<'a> {
     }
 }
 
-pub struct MeshTriangle<'a> {
+pub struct SMeshData<'a> {
     pub num_triangles: u32,
     pub vertices: Vec<glm::Vec3>,
     pub indices: Vec<u32>,
     pub st_coordinates: Vec<glm::Vec2>,
+    pub m: &'a Material::Material,
+}
+
+pub struct MeshTriangle<'a> {
+    pub mesh_data: SMeshData<'a>,
     pub bounding_box: Bounds3,
-    pub m: &Material::Material,
-    pub bvh: Option<Box<BVHAccel>>,
-    pub triangles: glm::Vec<Triangle>,
+    pub bvh: Option<BVHAccel<'a>>,
+    pub triangles: Vec<Triangle<'a>>,
 }
 
 impl<'a> MeshTriangle<'a> {
-    pub fn new(vertices: Vec<glm::Vec3>, indices: Vec<u32>,
-               num_triangles: u32, st_coordinates: Vec<glm::Vec2>) -> MeshTriangle 
+    pub fn new(
+        vertices: Vec<glm::Vec3>, 
+        st_coordinates: Vec<glm::Vec2>,
+        indices: Vec<u32>,
+        mat: &'a Material::Material,
+    ) -> MeshTriangle<'a>
     {
         let mut bounding_box = Bounds3::new(&vertices[0], &vertices[1]);   
         for vert in vertices.iter() {
             bounding_box = bounding_box.intersect_p(vert);
         }
-        
 
-        let mut mesh_triangle = MeshTriangle {
+        let num_triangles = indices.len() as u32 / 3;
+
+        let mesh_data = SMeshData {
             num_triangles,
             vertices,
             indices,
             st_coordinates,
-            bounding_box,
-            triangles: Vec::new(),
-            m: &Material::S_MATERIAL,
-            bvh: None
+            m: mat,
         };
 
-        let object_vec = Vec::with_capacity(num_triangles as usize);
-        let triangles = Vec::with_capacity(num_triangles as usize);
+        MeshTriangle {
+            mesh_data,
+            bounding_box,
+            triangles: Vec::new(), 
+            bvh: None,
+        }
+    }
+
+    pub fn build(&'a mut self) {
+        let num_triangles = self.mesh_data.num_triangles;
+        let mut triangles = Vec::with_capacity(num_triangles as usize);
         for i in 0..num_triangles {
-            let tri = Triangle::new(&mesh_triangle, i);
-            object_vec.push(&tri);
+            let tri = Triangle::new(&self.mesh_data, i);
             triangles.push(tri);
         }
-        let bvh = Box::new(BVHAccel(object_vec, 0, SplitMethod::NAIVE));
-        mesh_triangle.triangles = triangles;
-        mesh_triangle.bvh = Some(bvh);
+        self.triangles = triangles;
 
-        mesh_triangle
+        let mut object_vec = Vec::with_capacity(num_triangles as usize);
+        for tri in self.triangles.iter() {
+            object_vec.push(tri as &dyn ObjectTrait)
+        }
+        self.bvh = Some(BVHAccel::new(object_vec, 0, SplitMethod::NAIVE));
     }
 
 }
 
-impl ObjectTrait for MeshTriangle {
+impl<'a> ObjectTrait for MeshTriangle<'a> {
     fn get_bounds(&self) -> Bounds3 {
         return self.bounding_box.clone();
     }
 
     fn get_intersection(&self, ray: &crate::Ray::Ray) -> Option<IntersectData> {
-        todo!()
+        return self.bvh.as_ref().unwrap().get_intersection(ray);
     }
 }
 

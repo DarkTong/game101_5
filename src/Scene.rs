@@ -3,8 +3,7 @@ use crate::Intersection::IntersectData;
 use crate::Object::ObjectTrait;
 use crate::Light::Light;
 use crate::Ray::Ray;
-use crate::BVH::BVHAccel;
-use crate::bvh::SplitMethod;
+use crate::BVH::{BVHAccel, SplitMethod};
 use crate::Material::*;
 use std::boxed::Box;
 
@@ -16,7 +15,7 @@ pub struct Scene<'a> {
     pub max_depth: i32,
     pub bvh: Option<Box<BVHAccel<'a>>>,
 
-    objects: Vec<Box<dyn ObjectTrait>>,
+    objects: Vec<&'a dyn ObjectTrait>,
     lights: Vec<Light>,
 }
 
@@ -35,7 +34,7 @@ impl<'a> Scene<'a> {
         }
     }
 
-    pub fn get_objects(&self) -> &Vec<Box<dyn ObjectTrait>> {
+    pub fn get_objects(&self) -> &Vec<&'a dyn ObjectTrait> {
         return &self.objects;
     }
 
@@ -43,7 +42,7 @@ impl<'a> Scene<'a> {
         return &self.lights;
     }
 
-    pub fn add_object(&mut self, object: Box<dyn ObjectTrait>) {
+    pub fn add_object(&mut self, object: &'a dyn ObjectTrait) {
         self.objects.push(object);
     }
 
@@ -52,7 +51,7 @@ impl<'a> Scene<'a> {
     }
 
     pub fn get_intersect(&self, ray: &Ray) -> Option<IntersectData> {
-        return self.bvh.unwrap().get_intersection(ray);
+        return self.bvh.as_ref().unwrap().get_intersection(ray);
     }
 
     pub fn cast_ray(&self, ray: &Ray, depth: i32
@@ -62,7 +61,7 @@ impl<'a> Scene<'a> {
         }
 
         let inter_opt = self.get_intersect(ray);
-        let hit_color = self.background_color.clone();
+        let mut hit_color = self.background_color.clone();
         if let Some(inter) = inter_opt {
             let mut hit_point = inter.coords;
             let mut n = inter.normal;
@@ -96,11 +95,11 @@ impl<'a> Scene<'a> {
                             &Ray::new(&refraction_ray_orig, &refraction_direction), 
                             depth + 1
                         );
-                    let kr = fresnel(&ray.direction, &n, inter.ior);
+                    let kr = fresnel(&ray.direction, &n, inter.m.ior);
                     hit_color = reflection_color * kr + refraction_color * (1.0 - kr);
                 },
                 MaterialType::REFLECTION => {
-                    let kr = fresnel(&ray.direction, &n, inter.ior);
+                    let kr = fresnel(&ray.direction, &n, inter.m.ior);
 
                     let reflection_direction 
                         = glm::normalize(&reflect(&ray.direction, &n));
@@ -141,17 +140,21 @@ impl<'a> Scene<'a> {
                         let LdotN = glm::dot(&light_dir, &n).max(0.0f32);
                         let in_shadow = self.get_intersect(
                             &Ray::new(&shadow_point_orig, &light_dir),
-                        );
+                        ).is_some() as i32 as f32;
                         let _light_amt = (1.0 - in_shadow) * light.intensity * LdotN;
-                        light_amt += glm::vec3(_light_amt, _light_amt, _light_amt);
+                        light_amt += _light_amt;
                         let reflection_direction = reflect(&-light_dir, &n);
                         specular_color += (-glm::dot(&reflection_direction, &ray.direction))
                             .max(0.)
                             .powf(inter.m.specular_exponent) * light.intensity;
                     }
 
-                    hit_color = light_amt * (
-                        inter.eval_diffuse_color * inter.m.Kd + specular_color * inter.m.Ks
+                    hit_color = 
+                        inter.eval_diffuse_color * inter.m.Kd + specular_color * inter.m.Ks;
+                    hit_color = glm::vec3(
+                        hit_color.x * light_amt.x,
+                        hit_color.y * light_amt.y,
+                        hit_color.z * light_amt.z,
                     );
                 }
             }
@@ -163,6 +166,7 @@ impl<'a> Scene<'a> {
     // private
     fn build_bvh(&mut self) {
         let mut bvh = BVHAccel::new(self.objects.clone(), 1, SplitMethod::NAIVE);
+        self.bvh = Some(Box::new(bvh))
     }
 
 }

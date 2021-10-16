@@ -37,7 +37,7 @@ pub struct BVHAccel<'a> {
 
 impl<'a> BVHAccel<'a> {
     pub fn new(
-        p: Vec<&'a dyn ObjectTrait>, 
+        mut p: Vec<&'a dyn ObjectTrait>, 
         max_prims_in_node: u32,
         split_method: SplitMethod
     ) -> Self {
@@ -68,7 +68,7 @@ impl<'a> BVHAccel<'a> {
         }
         else {
             let mut centroid_bounds = Bounds3::default();
-            for obj in objects {
+            for obj in objects.iter() {
                 centroid_bounds = centroid_bounds.union_p(&obj.get_bounds().centroid());
             }
             let dim = centroid_bounds.max_extent();
@@ -98,7 +98,7 @@ impl<'a> BVHAccel<'a> {
         if node.is_none() {
             return None;
         }
-        let node_data = &node.unwrap();
+        let node_data = &node.as_ref().unwrap();
         // check bound failed
         if !node_data.bounds.intersect_ray(ray) {
             return None;
@@ -119,7 +119,7 @@ impl<'a> BVHAccel<'a> {
             left_data
         }
         // get neatest intersection data
-        else if left_data.unwrap().distance < right_data.unwrap().distance {
+        else if left_data.as_ref().unwrap().distance < right_data.as_ref().unwrap().distance {
             left_data
         }
         else {

@@ -3,7 +3,7 @@ use crate::Material::Material;
 pub struct IntersectData<'a> {
     pub coords: glm::Vec3,
     pub distance: f32,
-    pub index: i32,
+    pub index: u32,
     pub normal: glm::Vec3,
     pub uv: glm::Vec2,
     pub st: glm::Vec2,
