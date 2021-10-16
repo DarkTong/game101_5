@@ -1,9 +1,7 @@
-use nalgebra_glm::left_handed;
-
-use crate::Intersection::IntersectData;
-use crate::Object::ObjectTrait;
-use crate::Bounds3::Bounds3;
-use crate::Ray::Ray;
+use crate::intersection::IntersectData;
+use crate::object::ObjectTrait;
+use crate::bounds3::Bounds3;
+use crate::ray::Ray;
 
 pub enum SplitMethod {
     NAIVE,

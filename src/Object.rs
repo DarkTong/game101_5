@@ -1,6 +1,6 @@
-use crate::Ray::Ray;
-use crate::Intersection::IntersectData;
-use crate::Bounds3::Bounds3;
+use crate::ray::Ray;
+use crate::intersection::IntersectData;
+use crate::bounds3::Bounds3;
 
 pub trait ObjectTrait {
     fn get_intersection(&self, ray: &Ray) -> Option<IntersectData>;

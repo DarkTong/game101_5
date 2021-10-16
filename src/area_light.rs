@@ -1,4 +1,4 @@
-use crate::Light::Light;
+use crate::light::Light;
 use crate::global::get_random_f32;
 
 struct AreaLight {

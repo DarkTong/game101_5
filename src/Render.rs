@@ -1,6 +1,6 @@
-use crate::Scene::Scene;
+use crate::scene::Scene;
 use crate::global::*;
-use crate::Ray::*;
+use crate::ray::*;
 
 
 pub trait RenderTrait {
